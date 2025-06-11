@@ -1,28 +1,26 @@
 #!/usr/bin/env python3
-import os
 
 import aws_cdk as cdk
-
-from lex_analytics.lex_analytics_stack import LexAnalyticsStack
-
+from config import get_config
+from project_stack import ProjectStack
+from util.get_project_meta import get_project_meta
 
 app = cdk.App()
-LexAnalyticsStack(app, "LexAnalyticsStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+# Get deployment state from context, default to 'dev' if not specified
+stage = app.node.try_get_context('stage') or 'dev'
+configs = get_config(stage)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+# Create the stack
+for cfg in configs:
+    id = 'East'
+    if cfg.region == 'us-west-2':
+        id = 'West'
+    ProjectStack(app, id, cfg)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+# Add global tags
+meta = get_project_meta()
+cdk.Tags.of(app).add_all('Prefix',meta.name)
+cdk.Tags.of(app).add_all('Version', meta.version)
 
 app.synth()

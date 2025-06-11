@@ -4,9 +4,8 @@ from aws_cdk import (
     aws_sqs as sqs,
     aws_s3 as s3,
     aws_lambda as lambda_,
-    aws_iam,
-    aws_firehose as firehose,
-    aws_cfn as cfn,
+    aws_iam as iam,
+    aws_kinesisfirehose as firehose,
 )
 from constructs import Construct
 from app_config import AppConfig
@@ -19,7 +18,7 @@ class ProjectStack(Stack):
         self.props = props
         is_prod = (self.node.try_get_context('stage') or 'dev') == 'prod'
 
-        lambda_role = Role(self, "LambdaRole", props.lambda_role_name)
+        lambda_role = iam.Role.from_role_name(self, "LambdaRole", props.lambda_role_name)
 
         # Define the SQS queue
         test_queue = sqs.Queue(self, "TestQueue", queue_name=f"{props.prefix}-test-queue", visibility_timeout=Duration.seconds(30),
@@ -36,8 +35,8 @@ class ProjectStack(Stack):
             },
         )
 
-        results_bucket = s3.Bucket(self, "ResultsBucket", props.results_bucket_name)
-        firehose_role = aws_iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
+        results_bucket = s3.Bucket.from_bucket_name(self, "ResultsBucket", props.results_bucket_name)
+        firehose_role = iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
 
         results_firehose = firehose.CfnDeliveryStream(self, "ResultsFirehose", delivery_stream_name=f"{props.prefix}-results", s3_destination_configuration={
             "bucket_arn": results_bucket.bucket_arn,
