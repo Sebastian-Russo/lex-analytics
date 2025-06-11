@@ -1,0 +1,43 @@
+[project]
+name = "lex-analytics"
+version = "1.0.0"
+description = "Lex Analytics"
+readme = "README.md"
+requires-python = ">=3.8,<4.0"
+authors = [
+    { name = "Sebastian Russo", email = "russo.sebastian@gmail.com" }
+]
+maintainers = [
+    { name = "Sebastian Russo", email = "russo.sebastian@gmail.com" }
+]
+
+dependencies = [
+    "aws-cdk-lib>=2.190.0,<3.0.0",
+    "constructs>=10.0.0,<11.0.0",
+    "boto3>=1.26.0,<2.0.0",
+    "rootpath",
+    "pytest==7.2.0",
+    "pytest-env",
+    "pytest-html",
+    "pytest-cov",
+    "pluggy>=1.0.0",
+    "toml>=0.10.2",
+    "ruff==0.11.10",
+]
+
+[project.urls]
+
+[build-system]
+
+[tool.setuptools.packages.find]
+where = "./"
+
+[tool.pytest.ini_options]
+# By default, files matching test_*.py and *_test.py will be considered test modules (even if not specified here)
+python_files = [
+    "test_*.py",
+    "*_test.py"
+]
+
+[tool.ruff.format]
+quote-style = "single"
