@@ -88,7 +88,7 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
                 sessionState=session_state,
                 requestAttributes=request_attributes
             )
-            logger.error(f'Bot Response = {json.dumps(bot_response, indent=2)}')
+            logger.debug(f'Bot Response = {json.dumps(bot_response, indent=2)}')
         except Exception as e:
             step['Error'] = str(e)
             logger.error('Exception calling lex for test step [{},{}]. Error = {}'.format(step['test_case'], step['Step'], str(e)))

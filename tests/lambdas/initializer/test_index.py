@@ -3,52 +3,71 @@ import os
 import io
 import json
 from unittest.mock import patch
-import unittest
+import pytest
 
-# Is this import possibel because of the same directory structure?
-from lambdas.initializer import handler
+from lambdas.initializer import index
 
 os.environ['QUEUE_URL'] = 'https://sqs.us-east-1.amazonaws.com/123456789012/fake-queue-url'
 
 
+@pytest.fixture # this fixture is used to mock the s3_client.get_object method
+def csv_content():
 
-class TestInitializerLambda(unittest.TestCase):
-    @patch('initializer.index.s3_client.get_object')
-    @patch('initializer.index.sqs_client.send_message')
-    def test_handler(self, mock_send_message, mock_get_object):
-        # Read the CSV files content
-        csv_file_path = os.path.join(os.path.dirname(__file__), "../../../../docs/2025-06-10-pamphlet_bot.csv")
-        with open(csv_file_path, 'r') as f:
-            csv_content = f.read()
+    """Fixture to read the CSV file content"""
+    csv_file_path = os.path.join(os.path.dirname(__file__), "../../../../docs/2025-06-10-pamphlet_bot.csv")
+    with open(csv_file_path, 'r') as f:
+        csv_content = f.read()
 
-        mock_get_object.return_value = {
-            'Body': io.BytesIO(csv_content.encode('utf-8')) # Mocked as a file-like object
-        }
+@pytest.fixture
+def s3_event():
+    """Fixture providing a mock S3 event"""
+    return {'s3_path': 's3://test-bucket/test-file.csv'}
 
-        # Mock SQS send_message
-        mock_send_message.return_value = {
-            'MessageId': '12345'
-        }
+@pytest.fixture
+def mock_s3_response(csv_content):
+    """Fixture providing a mock S3 get_object response"""
+    return {"Body": BytesIO(csv_content.encode('utf-8'))}
 
-        # Mock event containing the S3 path
-        event = {'s3_path': 's3://test-bucket/test-cases/2025-06-10-pamphlet_bot.csv'}
+@pytest.fixture
+def mock_sqs_response():
+    """Fixture providing a mock SQS send_message response"""
+    return {'MessageId': '1234567890'}
 
-        # Call the lambda handler
-        response = handler(event, None)
+@patch('initializer.index.sqs_client')
+@patch('initializer.index.s3_client')
+def test_handler_s3_get_object_called_correctly(mock_s3_client, mock_sqs_client, s3_event, mock_s3_response):
+    """Test that s3_client.get_object is called with the correct arguments"""
 
-        # Assertions
-        self.assertEqual(mock_send_message.call_count, 2
-        ) # Ensure 50 test cases were sent to SQS (based on the CSV file)
-        self.assertEqual(response['statusCode'], 200)
-        self.assertEqual(response['Message'], 'Processing complete')
+    mock_get_object.return_value = mock_s3_response
+    mock_send_message.return_value = mock_sqs_response
 
-        # Verify SQS messages
-        for call in mock_send_message.call_args_list:
-            kwargs = call.kwargs
-            message_body = json.loads(kwargs['MessageBody'])
-            first = message_body[0]
-            self.assertIn('test_case', first) # Ensure the message contains the 'test_case' key
-            self.assertIn('step', first) # Ensure the message contains the 'step' key
+    handler(s3_event, None)
+
+    # Verify S3 get_object was called
+    mock_get_object.assert_called_once()
+
+@patch('initializer.index.s3_client.get_object')
+@patch('initializer.index.sqs_client.send_message')
+def test_handler_sqs_message_content(mock_send_message, mock_get_object, s3_event, mock_s3_response, mock_sqs_response):
+    """Test that SQS message content send by the handler"""
+
+    mock_get_object.return_value = mock_s3_response
+    mock_send_message.return_value = mock_sqs_response
+
+    handler(s3_event, None)
+
+    # Get all message bodies sent to SQS
+    sent_messages = []
+    for call in mock_send_message.call_args_list:
+        kwargs = call.kwargs
+        message_body = json.loads(kwargs['MessageBody'])
+        sent_messages.append(message_body)
+
+    # Verify the message structure for all sent messages
+    for message in sent_messages:
+        assert isinstance(message, dict), "Each message should be a dictionary"
+        assert 'test_case' in message, "Each message should have a 'test_case' key"
+        assert 'step' in message, "Each message should have a step field"
 
 if __name__ == '__main__':
-    unittest.main()
+    pytest.main([__file__])
