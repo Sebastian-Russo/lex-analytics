@@ -35,6 +35,11 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
     attributes = ''
     session_id = None
     request_attributes = {'channel': channel_attribute}
+    session_attributes = {
+        # increase Lex's timeout limit for the Lambda codehook
+        'x-amz-lex:codehook-timeout-ms': '90000',
+    }
+    session_state = {'sessionAttributes': session_attributes}
 
     # loop through each step in the test_case
     # step = row
@@ -45,7 +50,7 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
         if int(step['step']) == 1:
             # create a new session
             session_id = str(uuid.uuid4())
-            logger.debug('             new session: {}'.format(session_id))
+            logger.debug('new session: {}'.format(session_id))
 
             # reset the session attributes form the test_case
             attributes: str = step['session_attributes']
@@ -53,12 +58,9 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
             # parse the session attributes
             if len(attributes) > 0:
                 attributes = attributes.rstrip(',') # remove trailing comma
-                session_attributes = dict(item.split('=') for item in attributes.split(','))
-            else:
-                session_attributes = {}
+                dict(item.split('=') for item in attributes.split(','))
 
-        # increase Lex's timeout limit for the Lambda codehook
-        session_attributes['x-amz-lex:codehook-timeout-ms'] = '90000'
+
 
         session_attributes['test-run'] = '{}'.format(test_run_id) # test run identifier
         session_attributes['test-case'] = '{:0>3}'.format(step['test_case']) # :0>3 means 3 digits, padded with zeros
@@ -103,13 +105,17 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
 
         logger.info(json.dumps(bot_response, indent=4))
 
-        step['Response'] = bot_response.get('message', [{}])[0].get('content', '[no Response>')
-        step['actual_intent'] = bot_response['sessionState']['intent']['name']
-        step['actual_state'] = bot_response['sessionState']['intent']['state']
+        step['response'] = bot_response.get('message', [{}])[0].get('content', '[no Response>')
 
-        result_attributes = bot_response['sessionState']['sessionAttributes']
-        step['test_result'] = result_attributes.get('test-result', '')
-        step['test_explanation'] = result_attributes.get('test-explanation', '')
+        # Update our local state variables
+        session_state = bot_response.get('sessionState', {})
+        session_attributes = session_state.get('sessionAttributes', {})
+
+        step['actual_intent'] = session_attributes.get('actual_intent', '')
+        step['actual_state'] = session_attributes.get('actual_state', '')
+        step['test_result'] = session_attributes.get('test_result', '')
+        step['test_explanation'] = session_attributes.get('test_explanation', '')
+
 
         logger.debug(f'Session: {session_id}: Answer test step: [{step["test_case"]}.{step["Step"]} is {step["Response"]}')
 
