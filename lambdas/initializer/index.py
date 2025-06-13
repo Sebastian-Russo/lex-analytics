@@ -34,15 +34,20 @@ def handler(event, context):
 
     test_run = datetime.datetime.now().isoformat()
 
-    # Extract bucket and key from the s3_path
-    s3_path = event.get('s3_path')
-    if not s3_path:
-        raise ValueError('Missing s3_path in event', s3_path)
-
-    if not s3_path.startswith('s3://'):
-        raise ValueError('s3_path must start with s3://', s3_path)
-
-    bucket, key = s3_path[5:].split('/', 1) # s3_path[5:] removes the 's3://' prefix
+    # Determine bucket and key based on the event Type
+    if 's3_path' in event:
+        # Direct invocation with s3_path
+        s3_path = event['s3_path']
+        if not s3_path.startswith('s3://'):
+            raise ValueError('s3_path must start with s3://', s3_path)
+        bucket, key = s3_path[5:].split('/', 1) # s3_path[5:] removes the 's3://' prefix
+    elif 'detail' in event and 'bucket' in event['detail'] and 'object' in event['detail']:
+        # S3 event
+        bucket = event['detail']['bucket']['name']
+        key = event['detail']['object']['key']
+        s3_path = f's3://{bucket}/{key}'
+    else:
+        raise ValueError('Invalid event format. Missing "s3_path" or EventBridge S3 details')
 
     # Download the CSV file from S3
     logger.info('Downloading CSV file from S3 bucket: %s, key: %s', bucket, key)

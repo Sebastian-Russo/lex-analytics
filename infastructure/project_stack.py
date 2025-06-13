@@ -6,6 +6,8 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_kinesisfirehose as firehose,
+    aws_events as events,
+    aws_events_targets as targets,
 )
 from constructs import Construct
 from app_config import AppConfig
@@ -24,7 +26,7 @@ class ProjectStack(Stack):
         test_queue = sqs.Queue(self, "TestQueue", queue_name=f"{props.prefix}-test-queue", visibility_timeout=Duration.seconds(30),
         )
 
-        create_lambda(
+        initializer = create_lambda(
             self,
             'initializer',
             lambda_role,
@@ -36,6 +38,27 @@ class ProjectStack(Stack):
         )
 
         results_bucket = s3.Bucket.from_bucket_name(self, "ResultsBucket", props.results_bucket_name)
+
+        event_rule = events.Rule(
+            self,
+            "S3UploadRule",
+            rule_name=f"{props.prefix}-s3-upload-rule",
+            event_pattern=events.EventPattern(
+                source=["aws.s3"],
+                detail_type=["Object Created"],
+                detail={
+                    "bucket": {
+                        "name": [results_bucket.bucket_name]
+                    },
+                    "object": {
+                        "key": [{"prefix": f'{props.prefix}/input/'}]
+                    }
+                }
+            ),
+        )
+
+        event_rule.add_target(targets.LambdaFunction(initializer))
+
         firehose_role = iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
 
         results_firehose = firehose.CfnDeliveryStream(self, "ResultsFirehose", delivery_stream_name=f"{props.prefix}-results", s3_destination_configuration={
