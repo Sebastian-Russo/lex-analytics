@@ -10,6 +10,7 @@ import boto3
 import csv
 import json
 from collections import defaultdict
+import datetime
 
 # Configure logging
 logging.basicConfig(level=os.environ.get('LOGGING_LEVEL', 'DEBUG'))
@@ -30,6 +31,8 @@ def handler(event, context):
     """
 
     logger.debug('Event Received: %s', event)
+
+    test_run = datetime.datetime.now().isoformat()
 
     # Extract bucket and key from the s3_path
     s3_path = event.get('s3_path')
@@ -52,6 +55,8 @@ def handler(event, context):
     csv_reader = csv.DictReader(csv_content.splitlines())
     for row in csv_reader:
         test_number = row['test_case']
+        row['test_run'] = test_run
+        row['s3_path'] = s3_path
         grouped_tests[test_number].append(row)
 
     logger.info('Grounded tests: %s', json.dumps(grouped_tests, indent=4))
