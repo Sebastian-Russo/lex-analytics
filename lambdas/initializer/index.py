@@ -1,7 +1,7 @@
 # initializer.py
 """
 This lambda function is responsible for initializing the Lex Analytics pipeline.
-It takes an S3 path to a CSV file as input and groups the records by Test Case.
+It takes an S3 path to a CSV file as input and groups the records by test_case.
 """
 
 import logging
@@ -47,11 +47,11 @@ def handler(event, context):
     csv_content = response['Body'].read().decode('utf-8')
     logger.info('CSV file downloaded successfully: %s', s3_path)
 
-    # Parse the CSV file and group records by Test Case
+    # Parse the CSV file and group records by test_case
     grouped_tests = defaultdict(list) # Initialize an empty dictionary to store grouped tests
     csv_reader = csv.DictReader(csv_content.splitlines())
     for row in csv_reader:
-        test_number = row['Test Case']
+        test_number = row['test_case']
         grouped_tests[test_number].append(row)
 
     logger.info('Grounded tests: %s', json.dumps(grouped_tests, indent=4))
@@ -60,7 +60,7 @@ def handler(event, context):
     for test_number, test_step in grouped_tests.items():
         message_body = json.dumps(test_step)
         sqs_client.send_message(QueueUrl=QUEUE_URL, MessageBody=message_body)
-        logger.info(f'Sent message for Test Case {test_number} to SQS queue')
+        logger.info(f'Sent message for test_case {test_number} to SQS queue')
 
     return {
         'statusCode': 200,

@@ -27,16 +27,16 @@ class TestProcessorLambda(unittest.TestCase):
                     'receiptHandle': 'mockReceiptHandle',
                     'body': json.dumps([
                         {
-                            'Test Case': '1',
-                            'Step': '1',
-                            'Utterance': "",
-                            "Session Attributes": "",
-                            "Expected Response": "",
-                            "Expected Intent": "",
-                            "Expected State": "Fulfilled",
-                            "BotId": "TODO",
-                            "AliasId": "TODO",
-                            "LocaleId": "en_US"
+                            'test_case': '1',
+                            'step': '1',
+                            'utterance': "",
+                            "session_attributes": "",
+                            "expected_response": "",
+                            "expected_intent": "",
+                            "expected_state": "Fulfilled",
+                            "bot_id": "TODO", # TODO: Replace with actual bot_id
+                            "alias_id": "TODO", # TODO: Replace with actual alias_id
+                            "locale_id": "en_US"
                         }
                     ]),
                     'attributes': {
@@ -75,21 +75,21 @@ class TestProcessorLambda(unittest.TestCase):
             DeliveryChannel=os.environ['FIREHOSE_NAME'],
             Record={
                 'Data': json.dumps({
-                    'Test Case': '1',
-                    'Step': '1',
-                    'Utterance': "",
-                    "Session Attributes": "",
-                    "Expected Response": "",
-                    "Expected Intent": "",
-                    "Expected State": "Fulfilled",
-                    "BotId": "TODO",
-                    "AliasId": "TODO",
-                    "LocaleId": "en_US",
-                    "Response": "Hi",
-                    "Actual Intent": "GreetingIntent",
-                    "Actual State": "Fulfilled",
-                    "Test Result": None,
-                    "Test Explanation": None
+                    'test_case': '1',
+                    'step': '1',
+                    'utterance': "",
+                    "session_attributes": "",
+                    "expected_response": "",
+                    "expected_intent": "",
+                    "expected_state": "Fulfilled",
+                    "bot_id": "TODO", # TODO: Replace with actual bot_id
+                    "alias_id": "TODO", # TODO: Replace with actual alias_id
+                    "locale_id": "en_US", # TODO: Replace with actual locale_id
+                    "response": "Hi",
+                    "actual_intent": "GreetingIntent",
+                    "actual_state": "Fulfilled",
+                    "test_result": None,
+                    "test_explanation": None
                 })+ '\n'
             }
         )

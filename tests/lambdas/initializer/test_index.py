@@ -47,8 +47,8 @@ class TestInitializerLambda(unittest.TestCase):
             kwargs = call.kwargs
             message_body = json.loads(kwargs['MessageBody'])
             first = message_body[0]
-            self.assertIn('Test Case', first) # Ensure the message contains the 'Test Case' key
-            self.assertIn('Step', first) # Ensure the message contains the 'Step' key
+            self.assertIn('test_case', first) # Ensure the message contains the 'test_case' key
+            self.assertIn('step', first) # Ensure the message contains the 'step' key
 
 if __name__ == '__main__':
     unittest.main()

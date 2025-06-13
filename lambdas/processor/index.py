@@ -31,24 +31,24 @@ def flush_logs():
 
 
 def execute_test_case(test_case: list[dict]) -> list[dict]:
-    """Execute a test case and return the results"""
+    """Execute a test_case and return the results"""
     attributes = ''
     session_id = None
     request_attributes = {'channel': channel_attribute}
 
-    # loop through each step in the test case
+    # loop through each step in the test_case
     # step = row
     for step in test_case:
-        logger.debug(f'Evaluating Test={step["Test Case"]}, Step={step["Step"]}')
+        logger.debug(f'Evaluating Test={step["test_case"]}, Step={step["Step"]}')
 
         # if the step is a number, it is a test stepsession_attributes
-        if int(step['Step']) == 1:
+        if int(step['step']) == 1:
             # create a new session
             session_id = str(uuid.uuid4())
             logger.debug('             new session: {}'.format(session_id))
 
-            # reset the session attributes form the test case
-            attributes: str = step['Session Attributes']
+            # reset the session attributes form the test_case
+            attributes: str = step['session_attributes']
 
             # parse the session attributes
             if len(attributes) > 0:
@@ -61,26 +61,26 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
         session_attributes['x-amz-lex:codehook-timeout-ms'] = '90000'
 
         session_attributes['test-run'] = '{}'.format(test_run_id) # test run identifier
-        session_attributes['test-case'] = '{:0>3}'.format(step['Test Case']) # :0>3 means 3 digits, padded with zeros
-        session_attributes['test-step'] = '{:0>3}'.format(step['Step']) # :0>3 means 3 digits, padded with zeros
-        session_attributes['expected-response'] = '{}'.format(step['Expected Response']) # expected response
-        session_attributes['expected-intent'] = step['Expected Intent'] # expected intent
+        session_attributes['test-case'] = '{:0>3}'.format(step['test_case']) # :0>3 means 3 digits, padded with zeros
+        session_attributes['test-step'] = '{:0>3}'.format(step['step']) # :0>3 means 3 digits, padded with zeros
+        session_attributes['expected-response'] = '{}'.format(step['expected_response']) # expected response
+        session_attributes['expected-intent'] = step['expected_intent'] # expected intent
 
         logger.debug('session attributes: {}'.format(json.dumps(session_attributes)))
 
         session_state = {'sessionAttributes': session_attributes}
-        user_input = step['User Input']
+        user_input = step['utterance']
 
-        logger.info(f'Session: {session_id}: calling Lex for test step [{step["Test Case"]}, {step["Step"]}]')
+        logger.info(f'Session: {session_id}: calling Lex for test step [{step["test_case"]}, {step["step"]}]')
 
         # call Lex
         bot_response = None
         try:
             # call Lex
             bot_response = lex_client.recognize_text(
-                botId=step['BotId'],
-                botAliasId=step['AliasId'],
-                localeId=step['LocaleId'],
+                botId=step['bot_id'],
+                botAliasId=step['alias_id'],
+                localeId=step['locale_id'],
                 sessionId=session_id,
                 text=user_input,
                 sessionState=session_state,
@@ -89,33 +89,33 @@ def execute_test_case(test_case: list[dict]) -> list[dict]:
             logger.error(f'Bot Response = {json.dumps(bot_response, indent=2)}')
         except Exception as e:
             step['Error'] = str(e)
-            logger.error('Exception calling lex for test step [{},{}]. Error = {}'.format(step['Test Case'], step['Step'], str(e)))
+            logger.error('Exception calling lex for test step [{},{}]. Error = {}'.format(step['test_case'], step['Step'], str(e)))
             logger.error(f'Record = {json.dumps(step)}')
 
             break
 
         # check if we got a response from Lex
         if bot_response == None:
-            logger.error('No reponse from Lex for test step [{},{}]'.format(step['Test Case'], step['Step']))
+            logger.error('No reponse from Lex for test step [{},{}]'.format(step['test_case'], step['Step']))
             break
 
-        logger.info("--called Lex for test step [{},{}]".format(step['Test Case'], step['Step']))
+        logger.info("--called Lex for test step [{},{}]".format(step['test_case'], step['Step']))
 
         logger.info(json.dumps(bot_response, indent=4))
 
         step['Response'] = bot_response.get('message', [{}])[0].get('content', '[no Response>')
-        step['Actual Intent'] = bot_response['sessionState']['intent']['name']
-        step['Actual State'] = bot_response['sessionState']['intent']['state']
+        step['actual_intent'] = bot_response['sessionState']['intent']['name']
+        step['actual_state'] = bot_response['sessionState']['intent']['state']
 
         result_attributes = bot_response['sessionState']['sessionAttributes']
-        step['Test Result'] = result_attributes.get('test-result', '')
-        step['Test Explanation'] = result_attributes.get('test-explanation', '')
+        step['test_result'] = result_attributes.get('test-result', '')
+        step['test_explanation'] = result_attributes.get('test-explanation', '')
 
-        logger.debug(f'Session: {session_id}: Answer test step: [{step["Test Case"]}.{step["Step"]} is {step["Response"]}')
+        logger.debug(f'Session: {session_id}: Answer test step: [{step["test_case"]}.{step["Step"]} is {step["Response"]}')
 
     return test_case
 
-# process a list of test cases
+# process a list of test_cases
 def process_test_cases(test_cases: list[list[dict]]):
     test_results: list[list[dict]] = []
     start_time = time.perf_counter()
@@ -130,9 +130,9 @@ def handler(event, context):
 
     # Parse SQS message
     test_cases = [json.loads(record['body']) for record in event['Records']]
-    logger.info('Received %d test cases', len(test_cases))
+    logger.info('Received %d test_cases', len(test_cases))
 
-    # Process test cases
+    # Process test_cases
     duration, test_results = process_test_cases(test_cases)
     logger.info(f'Duration = {duration:.0f} seconds')
 
