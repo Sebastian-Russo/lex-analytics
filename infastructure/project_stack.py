@@ -70,3 +70,53 @@ class ProjectStack(Stack):
             event_source_arn=test_queue.queue_arn,
             batch_size=10
         )
+
+        glue_database = glue.CfnDatabase(
+            self,
+            "Database",
+            database_name=f"{props.prefix}-glue"
+            catalog_id=cdk.Aws.ACCOUNT_ID,
+            database_input={
+                'name': props.prefix
+            }
+        )
+
+        glue_table = glue.CfnTable(
+            self,
+            "ResultsTable"
+            catalog_id=cdk.Aws.ACCOUNT_ID,
+            database_name=glue_database.database_name,
+            table_input={
+                'name': 'results',
+                'storage_descriptor': {
+                    'columns': [
+                        {'name': 'test_run', 'type': 'string'},
+                        {'name': 'test_case', 'type': 'string'},
+                        {'name': 'step', 'type': 'string'},
+                        {'name': 'utterance', 'type': 'string'},
+                        {'name': 'session_attributes', 'type': 'string'},
+                        {'name': 'expected_response', 'type': 'string'},
+                        {'name': 'expected_intent', 'type': 'string'},
+                        {'name': 'expected_state', 'type': 'string'},
+                        {'name': 'bot_id', 'type': 'string'},
+                        {'name': 'alias_id', 'type': 'string'},
+                        {'name': 'locale_id', 'type': 'string'},
+                        {'name': 'response', 'type': 'string'},
+                        {'name': 'actual_intent', 'type': 'string'},
+                        {'name': 'actual_state', 'type': 'string'},
+                        {'name': 'test_result', 'type': 'string'},
+                        {'name': 'test_explanation', 'type': 'string'},
+                    ],
+                    'location': f"s3://{results_bucket.bucket_name}/{props.prefix}/results",
+                    'input_format': 'org.apache.hadoop.mapred.TextInputFormat',
+                    'output_format': 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat',
+                    'serde_info': {
+                        'serde_class_name': 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe',
+                        'parameters': {
+                            'serialization.format': '1'
+                        }
+                    }
+                },
+                'table_type': 'EXTERNAL_TABLE',
+            }
+        )
