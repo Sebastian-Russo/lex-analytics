@@ -8,12 +8,14 @@ from aws_cdk import (
     aws_kinesisfirehose as firehose,
     aws_events as events,
     aws_events_targets as targets,
+    aws_glue as glue,
+    Aws as cdk_aws,
 )
 from constructs import Construct
-from app_config import AppConfig
-from util.create_lambda import create_lambda
+from infastructure.config import AppConfig
+from infastructure.util.create_lambda import create_lambda
 
-class ProjectStack(Stack):
+class LexTestTool(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, props: AppConfig, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -97,8 +99,8 @@ class ProjectStack(Stack):
         glue_database = glue.CfnDatabase(
             self,
             "Database",
-            database_name=f"{props.prefix}-glue"
-            catalog_id=cdk.Aws.ACCOUNT_ID,
+            database_name=f"{props.prefix}-glue",
+            catalog_id=cdk_aws.ACCOUNT_ID,
             database_input={
                 'name': props.prefix
             }
@@ -106,8 +108,8 @@ class ProjectStack(Stack):
 
         glue_table = glue.CfnTable(
             self,
-            "ResultsTable"
-            catalog_id=cdk.Aws.ACCOUNT_ID,
+            "ResultsTable",
+            catalog_id=cdk_aws.ACCOUNT_ID,
             database_name=glue_database.database_name,
             table_input={
                 'name': 'results',

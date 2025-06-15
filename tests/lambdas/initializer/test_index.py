@@ -5,7 +5,7 @@ import json
 from unittest.mock import patch
 import pytest
 
-from lambdas.initializer import index
+from lambdas.initializer.index import handler
 
 os.environ['QUEUE_URL'] = 'https://sqs.us-east-1.amazonaws.com/123456789012/fake-queue-url'
 
@@ -33,9 +33,14 @@ def mock_sqs_response():
     """Fixture providing a mock SQS send_message response"""
     return {'MessageId': '1234567890'}
 
-@patch('initializer.index.sqs_client')
-@patch('initializer.index.s3_client')
-def test_handler_s3_get_object_called_correctly(mock_s3_client, mock_sqs_client, s3_event, mock_s3_response):
+@patch('lambdas.initializer.index.sqs_client')
+@patch('lambdas.initializer.index.s3_client')
+def test_handler_s3_get_object_called_correctly(
+    mock_send_message,
+    mock_get_object,
+    s3_event,
+    mock_s3_response,
+    mock_sqs_response):
     """Test that s3_client.get_object is called with the correct arguments"""
 
     mock_get_object.return_value = mock_s3_response
@@ -46,8 +51,8 @@ def test_handler_s3_get_object_called_correctly(mock_s3_client, mock_sqs_client,
     # Verify S3 get_object was called
     mock_get_object.assert_called_once()
 
-@patch('initializer.index.s3_client.get_object')
-@patch('initializer.index.sqs_client.send_message')
+@patch('lambdas.initializer.index.s3_client.get_object')
+@patch('lambdas.initializer.index.sqs_client.send_message')
 def test_handler_sqs_message_content(mock_send_message, mock_get_object, s3_event, mock_s3_response, mock_sqs_response):
     """Test that SQS message content send by the handler"""
 

@@ -1,17 +1,14 @@
 import os
-import unittest
 from unittest.mock import patch
-from processor.index import handler
 import json
 import pytest
 
+from lambdas.processor.index import handler
 
 
 os.environ['QUEUE_URL'] = 'https://sqs.us-east-1.amazonaws.com/123456789012/fake-queue-url'
 os.environ['FIREHOSE_NAME'] = 'TestFirehoseName'
 
-
-from lambdas.processor import index
 
 @pytest.fixture
 def sqs_event():

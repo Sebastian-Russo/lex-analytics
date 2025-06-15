@@ -1,12 +1,10 @@
-
-
 import os
 from typing import Optional, Mapping
 
-
 from aws_cdk.aws_logs import RetentionDays
 from aws_cdk.aws_iam import Role
-from aws_cdk.aws_lambda import Function as _lambda, Architecture, LogGroup, Runtime
+from aws_cdk import aws_lambda as _lambda
+from aws_cdk.aws_logs import LogGroup
 from aws_cdk import RemovalPolicy, Duration
 from constructs import Construct
 
@@ -18,7 +16,7 @@ def create_lambda(
     function_name: Optional[str],
     description: Optional[str],
     environment: Optional[Mapping[str, str]],
-    timeout: Duration,
+    timeout: Optional[Duration] = None,
     inline: bool = True,
 ) -> _lambda.Function:
     """
@@ -44,11 +42,13 @@ def create_lambda(
     }
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    lambda_path = os.path.join(script_dir, 'lambdas', id, 'index.py')
+    # Go up two directory levels to get to the project root (lex-analytics)
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    lambda_path = os.path.join(project_root, 'lambdas', id, 'index.py')
 
     if inline:
-        index_file_path = os.path.join(script_dir, 'lambdas', id, 'index.py')
-        with open(index_file_path, 'r') as file:
+        index_file_path = os.path.join(project_root, 'lambdas', id, 'index.py')
+        with open(index_file_path, 'r', encoding='utf-8') as file:
             code = _lambda.Code.from_inline(file.read())
     else:
         code = _lambda.Code.from_asset(lambda_path)
@@ -79,3 +79,5 @@ def create_lambda(
         retention=retention,
         removal_policy=RemovalPolicy.DESTROY,
     )
+
+    return fn

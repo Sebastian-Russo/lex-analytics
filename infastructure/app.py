@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import aws_cdk as cdk
-from config import get_config
-from project_stack import ProjectStack
-from util.get_project_meta import get_project_meta
+from .config import get_config
+from .project_stack import LexTestTool
+from .util.get_project_meta import get_project_meta
 
 app = cdk.App()
 
@@ -16,7 +16,7 @@ for cfg in configs:
     id = 'East'
     if cfg.region == 'us-west-2':
         id = 'West'
-    ProjectStack(app, id, cfg)
+    LexTestTool(app, id, cfg)
 
 # Add global tags
 meta = get_project_meta()
