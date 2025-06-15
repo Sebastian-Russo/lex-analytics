@@ -11,6 +11,7 @@ from aws_cdk import (
     aws_glue as glue,
     Aws as cdk_aws,
 )
+from aws_cdk import RemovalPolicy
 from constructs import Construct
 from infastructure.config import AppConfig
 from infastructure.util.create_lambda import create_lambda
@@ -22,7 +23,13 @@ class LexTestTool(Stack):
         self.props = props
         is_prod = (self.node.try_get_context('stage') or 'dev') == 'prod'
 
-        lambda_role = iam.Role.from_role_name(self, "LambdaRole", props.lambda_role_name)
+        # lambda_role = iam.Role.from_role_name(self, "LambdaRole", props.lambda_role_name)
+        lambda_role = iam.Role(
+            self,
+            "LambdaRole",
+            role_name=f"{props.prefix}-lambda-role",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+        )
 
         # Define the SQS queue
         test_queue = sqs.Queue(self, "TestQueue", queue_name=f"{props.prefix}-test-queue", visibility_timeout=Duration.seconds(30),
@@ -39,7 +46,19 @@ class LexTestTool(Stack):
             },
         )
 
-        results_bucket = s3.Bucket.from_bucket_name(self, "ResultsBucket", props.results_bucket_name)
+        # results_bucket = s3.Bucket.from_bucket_name(self, "ResultsBucket", props.results_bucket_name)
+        # Create a new bucket instead of using an existing one
+        results_bucket = s3.Bucket(
+            self,
+            "ResultsBucket",
+            bucket_name=f"{props.prefix}-results-bucket",
+            removal_policy=RemovalPolicy.DESTROY, # TODO: change when in real use
+            auto_delete_objects=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            versioned=True,
+        )
+
 
         event_rule = events.Rule(
             self,
@@ -61,18 +80,28 @@ class LexTestTool(Stack):
 
         event_rule.add_target(targets.LambdaFunction(initializer))
 
-        firehose_role = iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
+        # firehose_role = iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
+        firehose_role = iam.Role(
+            self,
+            "FirehoseRole",
+            role_name=f"{props.prefix}-firehose-role",
+            assumed_by=iam.ServicePrincipal("firehose.amazonaws.com"),
+        )
 
-        results_firehose = firehose.CfnDeliveryStream(self, "ResultsFirehose", delivery_stream_name=f"{props.prefix}-results", s3_destination_configuration={
-            "bucket_arn": results_bucket.bucket_arn,
-            "role_arn": firehose_role.role_arn,
-            "prefix": f"{props.prefix}/results/",
-            "error_output_prefix": f"{props.prefix}/error/",
-            "buffering_hints": {
-                "size_in_mb": 25, # Buffer size
-                "interval_in_seconds": 300 if is_prod else 15, #
-            },
-        })
+        # Create a firehose delivery stream that sends data to S3
+        results_firehose = firehose.CfnDeliveryStream(self, "ResultsFirehose",
+            delivery_stream_name=f"{props.prefix}-results",
+            s3_destination_configuration={
+                "bucketArn": results_bucket.bucket_arn,
+                "roleArn": firehose_role.role_arn,
+                "prefix": f"{props.prefix}/results/",
+                "errorOutputPrefix": f"{props.prefix}/error/",
+                "bufferingHints": {
+                    "sizeInMBs": 25, # Buffer size
+                    "intervalInSeconds": 300 if is_prod else 15,
+                },
+            }
+        )
 
 
         processor = create_lambda(

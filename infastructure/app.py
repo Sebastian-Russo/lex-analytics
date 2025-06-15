@@ -20,7 +20,7 @@ for cfg in configs:
 
 # Add global tags
 meta = get_project_meta()
-cdk.Tags.of(app).add_all('Prefix',meta.name) # tag all resources with project name
-cdk.Tags.of(app).add_all('Version', meta.version) # tag all resources with project version
+cdk.Tags.of(app).add('Prefix',meta.name) # tag all resources with project name
+cdk.Tags.of(app).add('Version', meta.version) # tag all resources with project version
 
 app.synth()

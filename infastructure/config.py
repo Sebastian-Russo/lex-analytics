@@ -18,9 +18,9 @@ class AppConfig:
 
     account: str
     region: str
-    lambda_role_name: str
-    firehose_role_arn: str
-    results_bucket_name: str
+    # lambda_role_name: str
+    # firehose_role_arn: str
+    # results_bucket_name: str
 
     prefix: str = meta.name
 
@@ -32,27 +32,27 @@ CONFIGS = {
         AppConfig(
             account='308665918648',
             region='us-east-1',
-            lambda_role_name='TODO',
-            firehose_role_arn='TODO',
-            results_bucket_name='TODO'
+            # lambda_role_name='TODO',
+            # firehose_role_arn='TODO',
+            # results_bucket_name='TODO'
         ),
     ],
     'val': [
         AppConfig(
             account='TODO',
             region='TODO',
-            lambda_role_name='TODO',
-            firehose_role_arn='TODO',
-            results_bucket_name='TODO'
+            # lambda_role_name='TODO',
+            # firehose_role_arn='TODO',
+            # results_bucket_name='TODO'
         ),
     ],
     'prod': [
         AppConfig(
             account='TODO',
             region='TODO',
-            lambda_role_name='TODO',
-            firehose_role_arn='TODO',
-            results_bucket_name='TODO'
+            # lambda_role_name='TODO',
+            # firehose_role_arn='TODO',
+            # results_bucket_name='TODO'
         ),
     ],
 }
