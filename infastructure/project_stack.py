@@ -103,6 +103,34 @@ class LexTestTool(Stack):
             }
         )
 
+        # Add managed policies for Lambda basic execution and CloudWatch Logs
+        lambda_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        # Add permissions for SQS
+        lambda_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "sqs:ReceiveMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueAttributes",
+                    "sqs:ChangeMessageVisibility"
+                ],
+                resources=[test_queue.queue_arn]
+            )
+        )
+
+        # Add permissions for Firehose (for the processor Lambda)
+        lambda_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "firehose:PutRecord",
+                    "firehose:PutRecordBatch"
+                ],
+                resources=["*"]  # You can restrict this to the specific Firehose ARN later
+            )
+        )
 
         processor = create_lambda(
             self,
@@ -125,21 +153,24 @@ class LexTestTool(Stack):
             batch_size=10
         )
 
+        # Create a glue database
         glue_database = glue.CfnDatabase(
             self,
             "Database",
-            database_name=f"{props.prefix}-glue",
             catalog_id=cdk_aws.ACCOUNT_ID,
             database_input={
-                'name': props.prefix
+                'name': f"{props.prefix}-glue",
+                'description': 'Database for Lex Analytics results'
             }
         )
 
+        # Make sure the database name in database_input matches the database_name
+        # Also ensure the table references the correct database name
         glue_table = glue.CfnTable(
             self,
             "ResultsTable",
             catalog_id=cdk_aws.ACCOUNT_ID,
-            database_name=glue_database.database_name,
+            database_name=f"{props.prefix}-glue",  # Use string directly instead of reference
             table_input={
                 'name': 'results',
                 'storage_descriptor': {
@@ -174,3 +205,6 @@ class LexTestTool(Stack):
                 'table_type': 'EXTERNAL_TABLE',
             }
         )
+
+        # Add explicit dependency
+        glue_table.add_depends_on(glue_database)
