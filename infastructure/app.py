@@ -13,9 +13,9 @@ configs = get_config(stage)
 
 # Create the stack
 for cfg in configs:
-    id = 'East'
+    id = 'LexTestTool-East'
     if cfg.region == 'us-west-2':
-        id = 'West'
+        id = 'LexTestTool-West'
     LexTestTool(app, id, cfg)
 
 # Add global tags

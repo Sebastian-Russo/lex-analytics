@@ -10,6 +10,7 @@ from aws_cdk import (
     aws_events_targets as targets,
     aws_glue as glue,
     Aws as cdk_aws,
+    aws_logs as logs,
 )
 from aws_cdk import RemovalPolicy
 from constructs import Construct
@@ -51,7 +52,7 @@ class LexTestTool(Stack):
         results_bucket = s3.Bucket(
             self,
             "ResultsBucket",
-            bucket_name=f"{props.prefix}-results-bucket",
+            bucket_name=f"{props.prefix}-test-tool-bucket",
             removal_policy=RemovalPolicy.DESTROY, # TODO: change when in real use
             auto_delete_objects=True,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
@@ -63,7 +64,7 @@ class LexTestTool(Stack):
         event_rule = events.Rule(
             self,
             "S3UploadRule",
-            rule_name=f"{props.prefix}-s3-upload-rule",
+            rule_name=f"{props.prefix}-s3-upload-trigger-rule",
             event_pattern=events.EventPattern(
                 source=["aws.s3"],
                 detail_type=["Object Created"],
@@ -80,7 +81,17 @@ class LexTestTool(Stack):
 
         event_rule.add_target(targets.LambdaFunction(initializer))
 
+        # Create a log group for firehose
+        log_group = logs.LogGroup(
+            self,
+            "FirehoseLogGroup",
+            retention=logs.RetentionDays.ONE_WEEK,
+            removal_policy=RemovalPolicy.DESTROY, # TODO: change when in real use
+            log_group_name=f"{props.prefix}-firehose-logs"
+        )
+
         # firehose_role = iam.Role.from_role_arn(self, "FirehoseRole", props.firehose_role_arn)
+        # Create a role for firehose instead of using an existing one
         firehose_role = iam.Role(
             self,
             "FirehoseRole",
@@ -88,9 +99,22 @@ class LexTestTool(Stack):
             assumed_by=iam.ServicePrincipal("firehose.amazonaws.com"),
         )
 
+        # Enabling Amazon CloudWatch error logging
+        firehose_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                resources=[log_group.log_group_arn],
+            )
+        )
+
         # Create a firehose delivery stream that sends data to S3
         results_firehose = firehose.CfnDeliveryStream(self, "ResultsFirehose",
-            delivery_stream_name=f"{props.prefix}-results",
+            delivery_stream_name=f"{props.prefix}-results-firehose",
+            delivery_stream_type="DirectPut",
             s3_destination_configuration={
                 "bucketArn": results_bucket.bucket_arn,
                 "roleArn": firehose_role.role_arn,
@@ -100,6 +124,11 @@ class LexTestTool(Stack):
                     "sizeInMBs": 25, # Buffer size
                     "intervalInSeconds": 300 if is_prod else 15,
                 },
+                "cloudWatchLoggingOptions": {
+                    "enabled": True,
+                    "logGroupName": log_group.log_group_name,
+                    "logStreamName": "FirehoseLogStream"
+                }
             }
         )
 
@@ -128,7 +157,8 @@ class LexTestTool(Stack):
                     "firehose:PutRecord",
                     "firehose:PutRecordBatch"
                 ],
-                resources=["*"]  # You can restrict this to the specific Firehose ARN later
+                # resources=[results_firehose.delivery_stream_name]
+                resources=[f"arn:aws:firehose:{cdk_aws.REGION}:{cdk_aws.ACCOUNT_ID}:deliverystream/{results_firehose.delivery_stream_name}"]
             )
         )
 
